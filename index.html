@@ -12,6 +12,13 @@ body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFo
 .header h1{font-size:2.2em;font-weight:800;letter-spacing:-1px;color:#00C805;text-shadow:0 0 20px rgba(0,200,5,.3)}
 .header p{color:#888;font-size:.95em;margin-top:6px}
 .card{background:linear-gradient(135deg,#111118,#1a1a2e);border:1px solid #222;border-radius:16px;padding:20px;margin:16px 0}
+.sec-title{font-size:.8em;color:#888;text-transform:uppercase;letter-spacing:1px;margin-bottom:12px;font-weight:700}
+.prize-wrap{display:flex;gap:16px;align-items:center}
+.prize-img{width:120px;height:120px;border-radius:12px;border:1px solid #333;object-fit:cover;flex-shrink:0}
+.prize-name{font-size:1.15em;font-weight:700;color:#fff}
+.prize-sub{color:#888;font-size:.85em;margin-top:4px;line-height:1.5}
+.prize-link{display:inline-block;margin-top:8px;color:#00ccff;font-size:.85em;text-decoration:none}
+.prize-link:hover{text-decoration:underline}
 .stats-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .stat-box{background:#0d0d14;border:1px solid #222;border-radius:12px;padding:14px;text-align:center}
 .stat-val{font-size:1.3em;font-weight:700;color:#fff}
@@ -32,8 +39,15 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
 .msg.err{display:block;background:#2e1010;border:1px solid #5f1e1e;color:#ff7f7f}
 .addr{font-family:monospace;font-size:.85em;color:#00ccff}
 .wallet-pill{background:#0d0d14;border:1px solid #222;border-radius:20px;padding:8px 14px;font-family:monospace;font-size:.85em;color:#00ff88;text-align:center;margin-top:10px;display:none}
+.buyer-row{display:flex;justify-content:space-between;align-items:center;background:#0d0d14;border:1px solid #222;border-radius:10px;padding:10px 14px;margin-bottom:8px}
+.buyer-row.you{border-color:#00C805}
+.buyer-addr{font-family:monospace;font-size:.85em;color:#00ccff}
+.buyer-you{color:#00ff88;font-size:.75em;margin-left:8px}
+.buyer-tickets{color:#fff;font-weight:700;font-size:.9em;white-space:nowrap}
+.buyer-usdg{color:#888;font-size:.75em;text-align:right}
 .foot{color:#555;font-size:.75em;text-align:center;padding:20px 0;line-height:1.6}
 .deadline{color:#ffaa44}
+@media (max-width:480px){.prize-wrap{flex-direction:column;text-align:center}.prize-img{width:160px;height:160px}}
 </style>
 </head>
 <body>
@@ -41,6 +55,18 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
   <div class="header">
     <h1>🎩 Raffle Hood</h1>
     <p>Buy USDG raffle tickets on Robinhood Chain — win a Bankr Club NFT</p>
+  </div>
+
+  <div class="card">
+    <div class="sec-title">🏆 The Prize</div>
+    <div class="prize-wrap">
+      <img class="prize-img" src="https://i2c.seadn.io/base/0x9fab8c51f911f0ba6dab64fd6e979bcf6424ce82/dcf043e704d43a9b385243cb0c776f/acdcf043e704d43a9b385243cb0c776f.gif" alt="Bankr Club #546">
+      <div>
+        <div class="prize-name">Bankr Club #546</div>
+        <div class="prize-sub">Bankr Club membership NFT on Base. Winner is drawn verifiably at random after the deadline — the NFT is transferred to the winning ticket holder.</div>
+        <a class="prize-link" href="https://opensea.io/item/base/0x9fab8c51f911f0ba6dab64fd6e979bcf6424ce82/546" target="_blank" rel="noopener">View on OpenSea ↗</a>
+      </div>
+    </div>
   </div>
 
   <div class="card">
@@ -69,6 +95,11 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
     <div class="msg" id="msg"></div>
   </div>
 
+  <div class="card">
+    <div class="sec-title">🎟️ Ticket Holders</div>
+    <div id="buyersList" style="color:#888;font-size:.85em">loading…</div>
+  </div>
+
   <div class="foot">
     Escrow contract: <span class="addr">0x9Dc6A206c09d4CF429D7A171A590c8bA2EE3b1EF</span><br>
     USDG token: <span class="addr">0x5fc5360D0400a0Fd4f2af552ADD042D716F1d168</span><br>
@@ -95,6 +126,8 @@ var SEL={
   buyersCount:'0xba49a08c',
   minimumMet:'0x667b807e',
   buyTickets:'0x2f366637',
+  getBuyers:'0xa17c1a53',
+  ticketsOf:'0x31657926',
   approve:'0x095ea7b3',
   allowance:'0xdd62ed3e',
   balanceOf:'0x70a08231'
@@ -107,6 +140,13 @@ function padN(n){return n.toString(16).padStart(64,'0');}
 function word(hex,i){i=i||0;return BigInt('0x'+hex.replace(/^0x/,'').slice(i*64,(i+1)*64||undefined).slice(0,64));}
 function fmt(v){var w=v/DEC,f=(v%DEC).toString().padStart(6,'0').replace(/0+$/,'');return w.toString()+(f?'.'+f:'');}
 function short(a){return a.slice(0,6)+'…'+a.slice(-4);}
+function decodeAddrArray(hex){
+  var h=hex.replace(/^0x/,'');
+  var len=Number(BigInt('0x'+h.slice(64,128)));
+  var out=[];
+  for(var i=0;i<len;i++){out.push('0x'+h.slice(128+i*64+24,128+(i+1)*64));}
+  return out;
+}
 
 function rpcRead(to,data){
   return fetch(RPC,{method:'POST',headers:{'Content-Type':'application/json'},
@@ -146,6 +186,32 @@ function loadStats(){
   });
 }
 
+function loadBuyers(){
+  var listEl=document.getElementById('buyersList');
+  rpcRead(ESCROW,SEL.getBuyers+padN(0n)+padN(200n))
+  .then(function(hex){
+    var addrs=decodeAddrArray(hex);
+    if(addrs.length===0){listEl.textContent='no tickets sold yet — be the first!';return;}
+    return Promise.all(addrs.map(function(a){
+      return rpcRead(ESCROW,SEL.ticketsOf+pad(a)).then(function(t){return {addr:a,tickets:word(t)};});
+    })).then(function(rows){
+      rows.sort(function(a,b){return b.tickets>a.tickets?1:(b.tickets<a.tickets?-1:0);});
+      listEl.style.color='';listEl.style.fontSize='';
+      listEl.innerHTML=rows.map(function(r){
+        var isYou=account&&r.addr.toLowerCase()===account.toLowerCase();
+        return '<div class="buyer-row'+(isYou?' you':'')+'">'
+          +'<div><span class="buyer-addr">'+short(r.addr)+'</span>'+(isYou?'<span class="buyer-you">(you)</span>':'')+'</div>'
+          +'<div style="text-align:right"><div class="buyer-tickets">'+r.tickets.toString()+' 🎟️</div>'
+          +'<div class="buyer-usdg">'+fmt(r.tickets*price)+' USDG</div></div>'
+          +'</div>';
+      }).join('');
+    });
+  })
+  .catch(function(e){listEl.textContent='could not load ticket holders: '+e.message;});
+}
+
+function refreshAll(){loadStats().then(loadBuyers);}
+
 function updateCost(){
   var q=BigInt(Math.max(1,parseInt(document.getElementById('qty').value)||1));
   document.getElementById('costLbl').textContent='Total: '+fmt(price*q)+' USDG';
@@ -181,6 +247,7 @@ function connect(){
     pill.style.display='block';pill.textContent='connected: '+short(account);
     document.getElementById('buySection').style.display='block';
     setMsg('info','Wallet connected on Robinhood Chain. Ready to buy.');
+    loadBuyers();
   })
   .catch(function(e){setMsg('err','Connection failed: '+(e.message||e));});
 }
@@ -226,7 +293,7 @@ function buy(){
   })
   .then(function(){
     setMsg('ok','🎟️ Success! You bought '+q.toString()+' ticket'+(q>1n?'s':'')+' for '+fmt(cost)+' USDG. Good luck!');
-    return loadStats();
+    return refreshAll();
   })
   .catch(function(e){
     var m=e&&e.message?e.message:String(e);
@@ -242,8 +309,8 @@ document.getElementById('qty').addEventListener('input',updateCost);
 document.getElementById('qMinus').addEventListener('click',function(){var i=document.getElementById('qty');i.value=Math.max(1,(parseInt(i.value)||1)-1);updateCost();});
 document.getElementById('qPlus').addEventListener('click',function(){var i=document.getElementById('qty');i.value=Math.min(100,(parseInt(i.value)||1)+1);updateCost();});
 
-loadStats();
-setInterval(loadStats,30000);
+refreshAll();
+setInterval(refreshAll,30000);
 })();
 </script>
 </body>
