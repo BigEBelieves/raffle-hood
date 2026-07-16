@@ -146,6 +146,8 @@ var WC_ESM='https://esm.sh/@walletconnect/ethereum-provider@2.23.10';
 var wcProvider=null;
 
 // WalletConnect registry IDs — pinned to the top of the WC modal wallet list
+// note: Base app (formerly Coinbase Wallet) has NO mobile deep link in the WC registry,
+// so the WC modal cannot list it on mobile — Base app users use the deep link button instead.
 var WC_RECOMMENDED=[
   '8837dd9413b1d9b585ee937d27a816590248386d9dbf59f5cd3422dbbb65683e', // Robinhood Wallet
   '18388be9ac2d02726dbac9777c96efaac06d744b2f6d580fccdd4127a6d01fd1', // Rabby
@@ -300,8 +302,8 @@ function openModal(){
   dl.innerHTML='<div class="modal-sub">'+(opts.length?'More options':'Connect a wallet')+'</div>'
     +'<button class="wallet-opt" type="button" id="wcBtn"><span class="wallet-ico">🔗</span><span>WalletConnect<div class="wallet-hint">Robinhood Wallet, Rabby, Phantom, Rainbow, Zerion, OKX + 400 more — QR on desktop, wallet list on mobile</div></span></button>'
     +'<div class="modal-sub">Or open in a wallet app (mobile)</div>'
+    +walletLink('Base App','🔵','https://go.cb-w.com/dapp?cb_url='+encodeURIComponent(DAPP_URL),'formerly Coinbase Wallet — opens this site inside the Base app')
     +walletLink('MetaMask','🦊','https://metamask.app.link/dapp/bigebelieves.github.io/raffle-hood/','opens this site in the MetaMask app')
-    +walletLink('Coinbase Wallet','🔵','https://go.cb-w.com/dapp?cb_url='+encodeURIComponent(DAPP_URL),'opens this site in the Coinbase Wallet app')
     +walletLink('Trust Wallet','🛡️','https://link.trustwallet.com/open_url?coin_id=60&url='+encodeURIComponent(DAPP_URL),'opens this site in the Trust Wallet app');
   document.getElementById('wcBtn').addEventListener('click',function(){closeModal();connectWalletConnect();});
   document.getElementById('modalBg').classList.add('open');
