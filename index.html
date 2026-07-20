@@ -177,10 +177,10 @@ var CHAINS={
 };
 var cur=CHAINS.robinhood;
 var DEC=1000000n; // both USDG and USDC have 6 decimals
-var DAPP_URL='https://bigebelieves.github.io/raffle-hood/';
+var DAPP_URL='https://bigebelieves.github.io/rafflechain/';
 var WC_PROJECT_ID='8970cd9ed5eb0de88206ad00f50b813b';
 var WC_ESM='https://esm.sh/@walletconnect/ethereum-provider@2.23.10';
-var HANDLES_URL='https://raw.githubusercontent.com/BigEBelieves/raffle-hood/main/handles.json';
+var HANDLES_URL='https://raw.githubusercontent.com/BigEBelieves/rafflechain/main/handles.json';
 var handleMap={};
 var wcProvider=null;
 
@@ -459,7 +459,7 @@ function openModal(){
     +'<button class="wallet-opt" type="button" id="wcBtn"><span class="wallet-ico">🔗</span><span>WalletConnect<div class="wallet-hint">Robinhood Wallet, Rabby, Phantom, Rainbow, Zerion, OKX + 400 more — QR on desktop, wallet list on mobile</div></span></button>'
     +'<div class="modal-sub">Or open in a wallet app (mobile)</div>'
     +walletLink('Base App','🔵','https://go.cb-w.com/dapp?cb_url='+encodeURIComponent(DAPP_URL),'formerly Coinbase Wallet — opens this site inside the Base app')
-    +walletLink('MetaMask','🦊','https://metamask.app.link/dapp/bigebelieves.github.io/raffle-hood/','opens this site in the MetaMask app')
+    +walletLink('MetaMask','🦊','https://metamask.app.link/dapp/bigebelieves.github.io/rafflechain/','opens this site in the MetaMask app')
     +walletLink('Trust Wallet','🛡️','https://link.trustwallet.com/open_url?coin_id=60&url='+encodeURIComponent(DAPP_URL),'opens this site in the Trust Wallet app');
   document.getElementById('wcBtn').addEventListener('click',function(){closeModal();connectWalletConnect();});
   document.getElementById('modalBg').classList.add('open');
