@@ -91,6 +91,9 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
 .buyer-tickets{color:#fff;font-weight:700;font-size:.9em;white-space:nowrap}
 .buyer-usdg{color:#888;font-size:.75em;text-align:right}
 .buyer-tag{color:#ffaa44;font-size:.7em;margin-left:6px}
+.buyer-chain{font-size:.7em;margin-left:6px;padding:2px 6px;border-radius:6px;border:1px solid #333}
+.buyer-chain.rh{color:#00ff88;border-color:#1e5f2e}
+.buyer-chain.bs{color:#00ccff;border-color:#1e3a5f}
 .buyer-handle{color:#00ccff;font-weight:600;font-size:.85em;margin-right:6px}
 .howto-option{margin-bottom:14px}
 .howto-option:last-child{margin-bottom:0}
@@ -141,8 +144,8 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
       <button class="chain-tab" id="tabBase" type="button">USDC · Base</button>
     </div>
     <div class="stats-grid">
-      <div class="stat-box"><div class="stat-val" id="sTickets">—</div><div class="stat-lbl">Tickets Sold</div></div>
-      <div class="stat-box"><div class="stat-val" id="sRaised">—</div><div class="stat-lbl" id="sRaisedLbl">USDG Raised</div></div>
+      <div class="stat-box"><div class="stat-val" id="sTickets">—</div><div class="stat-lbl">Tickets Sold (all chains)</div></div>
+      <div class="stat-box"><div class="stat-val" id="sRaised">—</div><div class="stat-lbl" id="sRaisedLbl">$ Raised (all chains)</div></div>
       <div class="stat-box"><div class="stat-val" id="sPrice">—</div><div class="stat-lbl">Ticket Price</div></div>
       <div class="stat-box"><div class="stat-val deadline" id="sDeadline">—</div><div class="stat-lbl">Deadline</div></div>
     </div>
@@ -203,7 +206,7 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
   </div>
 
   <div class="card">
-    <div class="sec-title">🎟️ Ticket Holders — <span id="holdersChain">Robinhood</span></div>
+    <div class="sec-title">🎟️ Ticket Holders — <span id="holdersChain">All Chains</span></div>
     <div id="buyersList" style="color:#888;font-size:.85em">loading…</div>
   </div>
 
@@ -304,34 +307,39 @@ function decodeAddrArray(hex){
   return out;
 }
 
-function rpcRead(to,data){
-  return fetch(cur.rpc,{method:'POST',headers:{'Content-Type':'application/json'},
+function rpcReadOn(chain,to,data){
+  return fetch(chain.rpc,{method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({jsonrpc:'2.0',id:1,method:'eth_call',params:[{to:to,data:data},'latest']})})
     .then(function(r){return r.json();})
     .then(function(j){if(j.error)throw new Error(j.error.message);return j.result;});
 }
+function rpcRead(to,data){return rpcReadOn(cur,to,data);}
 
 function setMsg(cls,text){var m=document.getElementById('msg');m.className='msg '+cls;m.textContent=text;}
 function clearMsg(){document.getElementById('msg').className='msg';}
 
-// ---------- offchain timeline credits (Robinhood only, via Blockscout) ----------
-function loadOffchainCredits(onchainHolders){
-  if(!cur.blockscout)return Promise.resolve([]);
-  return fetch(HANDLES_URL).then(function(hr){return hr.json();}).then(function(hm){
+// ---------- X handle map ----------
+function loadHandles(){
+  return fetch(HANDLES_URL,{cache:'no-store'}).then(function(hr){return hr.json();}).then(function(hm){
     if(hm&&typeof hm==='object'&&!Array.isArray(hm))handleMap=hm;
-  }).catch(function(){}).then(function(){
-  return fetch(cur.blockscout+'/addresses/'+cur.escrow+'/token-transfers?type=ERC-20&filter=to')
+  }).catch(function(){});
+}
+
+// ---------- offchain timeline credits (Robinhood only, via Blockscout) ----------
+function loadOffchainCredits(chain,onchainHolders,chainPrice){
+  if(!chain.blockscout)return Promise.resolve([]);
+  return fetch(chain.blockscout+'/addresses/'+chain.escrow+'/token-transfers?type=ERC-20&filter=to')
     .then(function(r){return r.json();})
     .then(function(data){
       if(!data||!data.items)return[];
       var onchainMap={};
       onchainHolders.forEach(function(b){
-        onchainMap[b.addr.toLowerCase()]={tickets:b.tickets,usdg:BigInt(b.tickets)*price};
+        onchainMap[b.addr.toLowerCase()]={tickets:b.tickets,usdg:BigInt(b.tickets)*chainPrice};
       });
       var bySender={};
       data.items.forEach(function(item){
         var tokenAddr=item.token&&item.token.address;
-        if(!tokenAddr||tokenAddr.toLowerCase()!==cur.token.toLowerCase())return;
+        if(!tokenAddr||tokenAddr.toLowerCase()!==chain.token.toLowerCase())return;
         var from=item.from&&item.from.hash;
         if(!from)return;
         from=from.toLowerCase();
@@ -344,59 +352,104 @@ function loadOffchainCredits(onchainHolders){
         var totalSent=bySender[addr].total;
         var onchain=onchainMap[addr]||{tickets:0,usdg:0n};
         var extraUsdg=totalSent-onchain.usdg;
-        if(extraUsdg>0n&&price>0n){
-          var extraTickets=Number(extraUsdg/price);
+        if(extraUsdg>0n&&chainPrice>0n){
+          var extraTickets=Number(extraUsdg/chainPrice);
           if(extraTickets>0){
             credits.push({addr:addr,tickets:extraTickets,usdg:extraUsdg,offchain:true});
           }
         }
       });
       return credits;
-    });
-  }).catch(function(){return[];});
+    }).catch(function(){return[];});
 }
 
-// ---------- stats + holders ----------
-function refreshAll(){
-  rpcRead(cur.escrow,SEL.status).then(function(st){
-    raised=word(st,0);
-    var totalTickets=Number(word(st,1));
-    var buyers=Number(word(st,2));
-    minimumMet=word(st,3)===1n;
-    deadlineSec=Number(word(st,5));
-    minRev=word(st,6);
-    price=word(st,7);
-
-    return rpcRead(cur.escrow,SEL.getHolders+padN(0n)+padN(300n)).then(function(hex){
+// ---------- per-chain data fetch ----------
+function fetchChainData(chain){
+  return rpcReadOn(chain,chain.escrow,SEL.status).then(function(st){
+    var data={
+      chain:chain,
+      raised:word(st,0),
+      totalTickets:Number(word(st,1)),
+      buyers:Number(word(st,2)),
+      minimumMet:word(st,3)===1n,
+      deadlineSec:Number(word(st,5)),
+      minRev:word(st,6),
+      price:word(st,7)
+    };
+    return rpcReadOn(chain,chain.escrow,SEL.getHolders+padN(0n)+padN(300n)).then(function(hex){
       var addrs=decodeAddrArray(hex);
       return Promise.all(addrs.map(function(a){
-        return rpcRead(cur.escrow,SEL.ticketsOf+pad(a)).then(function(t){
-          return{addr:a,tickets:Number(word(t)),offchain:false};
+        return rpcReadOn(chain,chain.escrow,SEL.ticketsOf+pad(a)).then(function(t){
+          return{addr:a,tickets:Number(word(t)),offchain:false,chainKey:chain.key,sym:chain.sym,price:data.price};
         });
       })).then(function(holders){
         holders=holders.filter(function(h){return h.tickets>0;});
-        return loadOffchainCredits(holders).then(function(credits){
-          var offTickets=credits.reduce(function(s,c){return s+c.tickets;},0);
-          var offRaised=credits.reduce(function(s,c){return s+c.usdg;},0n);
-          var shownTickets=totalTickets+offTickets;
-          var shownRaised=raised+offRaised;
-          var shownBuyers=buyers+credits.length;
-
-          document.getElementById('sTickets').textContent=shownTickets+' ('+shownBuyers+' buyers)';
-          document.getElementById('sRaised').textContent=fmt(shownRaised);
-          document.getElementById('sRaisedLbl').textContent=cur.sym+' Raised';
-          document.getElementById('sPrice').textContent=fmt(price)+' '+cur.sym;
-          var d=new Date(deadlineSec*1000);
-          document.getElementById('sDeadline').textContent=d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
-          var pct=minRev>0n?Number(shownRaised*100n/minRev):0;
-          document.getElementById('bar').style.width=Math.min(pct,100)+'%';
-          document.getElementById('barLbl').textContent=fmt(shownRaised)+' / '+fmt(minRev)+' '+cur.sym+' minimum ('+pct+'%)';
-          updateCost();
-          displayBuyers(holders.concat(credits));
-          updateSections();
+        return loadOffchainCredits(chain,holders,data.price).then(function(credits){
+          credits.forEach(function(c){c.chainKey=chain.key;c.sym=chain.sym;c.price=data.price;});
+          data.holders=holders.concat(credits);
+          data.offTickets=credits.reduce(function(s,c){return s+c.tickets;},0);
+          data.offRaised=credits.reduce(function(s,c){return s+c.usdg;},0n);
+          data.offBuyers=credits.length;
+          return data;
         });
       });
     });
+  });
+}
+
+// ---------- stats + holders (aggregated across BOTH chains) ----------
+function refreshAll(){
+  loadHandles().then(function(){
+    return Promise.all([
+      fetchChainData(CHAINS.robinhood).catch(function(){return null;}),
+      fetchChainData(CHAINS.base).catch(function(){return null;})
+    ]);
+  }).then(function(res){
+    var rh=res[0],bs=res[1];
+    var chains=[rh,bs].filter(function(d){return d!==null;});
+    if(chains.length===0)throw new Error('could not reach either chain RPC');
+
+    // keep cur-chain globals fresh for buy/gift/refund logic
+    var curData=cur.key==='robinhood'?rh:bs;
+    if(curData){
+      raised=curData.raised;
+      minimumMet=curData.minimumMet;
+      deadlineSec=curData.deadlineSec;
+      minRev=curData.minRev;
+      price=curData.price;
+    }
+
+    var allTickets=0,allBuyers=0,allRaised=0n,allHolders=[];
+    chains.forEach(function(d){
+      allTickets+=d.totalTickets+d.offTickets;
+      allBuyers+=d.buyers+d.offBuyers;
+      allRaised+=d.raised+d.offRaised;
+      allHolders=allHolders.concat(d.holders);
+    });
+
+    document.getElementById('sTickets').textContent=allTickets+' ('+allBuyers+' buyers)';
+    document.getElementById('sRaised').textContent='$'+fmt(allRaised);
+    document.getElementById('sRaisedLbl').textContent='$ Raised (all chains)';
+    document.getElementById('sPrice').textContent=(curData?fmt(curData.price):'10')+' '+cur.sym;
+    var dl=curData?curData.deadlineSec:(chains[0]?chains[0].deadlineSec:0);
+    if(dl){
+      var d=new Date(dl*1000);
+      document.getElementById('sDeadline').textContent=d.toLocaleDateString(undefined,{month:'short',day:'numeric'})+' '+d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+    }
+
+    // progress bar tracks the currently-selected escrow (each has its own minimum)
+    if(curData){
+      var curShownRaised=curData.raised+curData.offRaised;
+      var pct=curData.minRev>0n?Number(curShownRaised*100n/curData.minRev):0;
+      document.getElementById('bar').style.width=Math.min(pct,100)+'%';
+      document.getElementById('barLbl').textContent=fmt(curShownRaised)+' / '+fmt(curData.minRev)+' '+cur.sym+' minimum on '+cur.chainName+' ('+pct+'%)';
+    }else{
+      document.getElementById('barLbl').textContent=cur.chainName+' RPC unreachable — showing other chain totals above';
+    }
+
+    updateCost();
+    displayBuyers(allHolders);
+    updateSections();
   }).catch(function(e){
     document.getElementById('barLbl').textContent='could not load raffle data: '+e.message;
   });
@@ -404,19 +457,20 @@ function refreshAll(){
 
 function displayBuyers(all){
   var listEl=document.getElementById('buyersList');
-  document.getElementById('holdersChain').textContent=cur.label;
+  document.getElementById('holdersChain').textContent='All Chains';
   if(all.length===0){listEl.style.color='#888';listEl.textContent='no tickets sold yet — be the first!';return;}
   all.sort(function(a,b){return b.tickets>a.tickets?1:(b.tickets<a.tickets?-1:0);});
   listEl.style.color='';listEl.style.fontSize='';
   listEl.innerHTML=all.map(function(r){
     var isYou=account&&r.addr.toLowerCase()===account.toLowerCase();
     var tag=r.offchain?'<span class="buyer-tag">⚡ timeline</span>':'';
+    var chainTag=r.chainKey==='base'?'<span class="buyer-chain bs">Base</span>':'<span class="buyer-chain rh">Robinhood</span>';
     var h=handleMap[r.addr.toLowerCase()]||'';
     var handleHtml=h?'<span class="buyer-handle">@'+h+'</span> ':'';
     return '<div class="buyer-row'+(isYou?' you':'')+'">'
-      +'<div>'+handleHtml+'<span class="buyer-addr">'+short(r.addr)+'</span>'+tag+(isYou?'<span class="buyer-you">(you)</span>':'')+'</div>'
+      +'<div>'+handleHtml+'<span class="buyer-addr">'+short(r.addr)+'</span>'+chainTag+tag+(isYou?'<span class="buyer-you">(you)</span>':'')+'</div>'
       +'<div style="text-align:right"><div class="buyer-tickets">'+r.tickets+' 🎟️</div>'
-      +'<div class="buyer-usdg">'+fmt(BigInt(r.tickets)*price)+' '+cur.sym+'</div></div>'
+      +'<div class="buyer-usdg">'+fmt(BigInt(r.tickets)*r.price)+' '+r.sym+'</div></div>'
       +'</div>';
   }).join('');
 }
@@ -739,7 +793,7 @@ onConnected=function(name){
 };
 
 refreshAll();
-setInterval(refreshAll,30000);
+setInterval(refreshAll,15000);
 })();
 </script>
 </body>
