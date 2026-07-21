@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-version="rafflechain-v10-barmeta">
+<html lang="en" data-version="rafflechain-v11-bartotal">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -452,10 +452,9 @@ function refreshAll(){
     }
 
     if(curData){
-      var curShownRaised=curData.raised+curData.offRaised;
-      var pct=curData.minRev>0n?Number(curShownRaised*100n/curData.minRev):0;
+      var pct=curData.minRev>0n?Number(allRaised*100n/curData.minRev):0;
       document.getElementById('bar').style.width=Math.min(pct,100)+'%';
-      document.getElementById('barRaised').textContent='$'+fmt(curShownRaised);
+      document.getElementById('barRaised').textContent='$'+fmt(allRaised);
       document.getElementById('barMin').textContent='$'+fmt(curData.minRev)+' min';
       document.getElementById('barLbl').style.display='none';
     }else{
