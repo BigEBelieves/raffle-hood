@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-version="rafflechain-v8-basecredits">
+<html lang="en" data-version="rafflechain-v9-nobarlbl">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -153,7 +153,7 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
       <div class="stat-box"><div class="stat-val deadline" id="sDeadline">—</div><div class="stat-lbl">Deadline</div></div>
     </div>
     <div class="bar-wrap"><div class="bar" id="bar"></div></div>
-    <div class="bar-lbl" id="barLbl">loading…</div>
+    <div class="bar-lbl" id="barLbl" style="display:none"></div>
   </div>
 
   <div class="card">
@@ -451,16 +451,20 @@ function refreshAll(){
       var curShownRaised=curData.raised+curData.offRaised;
       var pct=curData.minRev>0n?Number(curShownRaised*100n/curData.minRev):0;
       document.getElementById('bar').style.width=Math.min(pct,100)+'%';
-      document.getElementById('barLbl').textContent=fmt(curShownRaised)+' / '+fmt(curData.minRev)+' '+cur.sym+' minimum on '+cur.chainName+' ('+pct+'%)';
+      document.getElementById('barLbl').style.display='none';
     }else{
-      document.getElementById('barLbl').textContent=cur.chainName+' RPC unreachable — showing other chain totals above';
+      var bl=document.getElementById('barLbl');
+      bl.style.display='';
+      bl.textContent=cur.chainName+' RPC unreachable — showing other chain totals above';
     }
 
     updateCost();
     displayBuyers(allHolders);
     updateSections();
   }).catch(function(e){
-    document.getElementById('barLbl').textContent='could not load raffle data: '+e.message;
+    var bl2=document.getElementById('barLbl');
+    bl2.style.display='';
+    bl2.textContent='could not load raffle data: '+e.message;
   });
 }
 
