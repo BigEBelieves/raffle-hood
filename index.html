@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en" data-version="rafflechain-v9-nobarlbl">
+<html lang="en" data-version="rafflechain-v10-barmeta">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -66,7 +66,10 @@ body{background:#0a0a0f;color:#e0e0e0;font-family:-apple-system,BlinkMacSystemFo
 .stat-box{background:#0d0d14;border:1px solid #222;border-radius:12px;padding:14px;text-align:center}
 .stat-val{font-size:1.3em;font-weight:700;color:#fff}
 .stat-lbl{font-size:.75em;color:#888;margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
-.bar-wrap{background:#0d0d14;border-radius:8px;height:10px;margin:16px 0 6px;overflow:hidden}
+.bar-meta{display:flex;justify-content:space-between;align-items:baseline;font-size:.85em;margin:14px 0 4px}
+.bar-meta .bar-raised{color:#00ff88;font-weight:700}
+.bar-meta .bar-min{color:#888}
+.bar-wrap{background:#0d0d14;border-radius:8px;height:10px;margin:0 0 6px;overflow:hidden}
 .bar{background:linear-gradient(90deg,#00C805,#00ff88);height:100%;width:0%;transition:width .6s}
 .bar-lbl{font-size:.8em;color:#888;text-align:center}
 button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font-weight:700;cursor:pointer;margin-top:12px}
@@ -152,6 +155,7 @@ button{width:100%;padding:14px;border:none;border-radius:12px;font-size:1em;font
       <div class="stat-box"><div class="stat-val" id="sPrice">—</div><div class="stat-lbl">Ticket Price</div></div>
       <div class="stat-box"><div class="stat-val deadline" id="sDeadline">—</div><div class="stat-lbl">Deadline</div></div>
     </div>
+    <div class="bar-meta"><span class="bar-raised" id="barRaised">$0</span><span class="bar-min" id="barMin">$800 min</span></div>
     <div class="bar-wrap"><div class="bar" id="bar"></div></div>
     <div class="bar-lbl" id="barLbl" style="display:none"></div>
   </div>
@@ -451,6 +455,8 @@ function refreshAll(){
       var curShownRaised=curData.raised+curData.offRaised;
       var pct=curData.minRev>0n?Number(curShownRaised*100n/curData.minRev):0;
       document.getElementById('bar').style.width=Math.min(pct,100)+'%';
+      document.getElementById('barRaised').textContent='$'+fmt(curShownRaised);
+      document.getElementById('barMin').textContent='$'+fmt(curData.minRev)+' min';
       document.getElementById('barLbl').style.display='none';
     }else{
       var bl=document.getElementById('barLbl');
